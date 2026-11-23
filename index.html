@@ -17,9 +17,22 @@
 <!-- SweetAlert2 (Lightweight Modal) -->
 <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
-  html { scrollbar-width: none; }          /* Firefox */
-html::-webkit-scrollbar { display: none; } /* Chrome, Safari, Edge */
   html, body { margin: 0; padding: 0; background: #f7f5f0; }
+
+  /* === THEMED SCROLLBAR, ON THE LEFT === */
+  html,
+  #buku-misa-container:fullscreen { direction: rtl; } /* rtl moves the bar to the left */
+  #buku-misa-container:-webkit-full-screen { direction: rtl; }
+  .viewer { direction: ltr; } /* keep content left-to-right */
+  * { scrollbar-width: thin; scrollbar-color: #966331 #f7f5f0; } /* Firefox */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #f7f5f0; }
+  ::-webkit-scrollbar-thumb {
+    background: #966331;
+    border-radius: 10px;
+    border: 2px solid #f7f5f0;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #5f3f1f; }
   #buku-misa-container * {
     box-sizing: border-box;
   }
@@ -1182,14 +1195,21 @@ html::-webkit-scrollbar { display: none; } /* Chrome, Safari, Edge */
   // FIX: Smart Resize. Only triggers if the screen WIDTH changes (e.g. rotating phone).
   // Prevents intense lag when scrolling up/down hides the mobile browser address bar.
   let lastWidth = window.innerWidth;
+  let wasMobile = window.innerWidth < 768;
   window.addEventListener("resize", () => {
     clearTimeout(window.resizeTimer);
     window.resizeTimer = setTimeout(() => {
-      if (window.innerWidth !== lastWidth) {
-        lastWidth = window.innerWidth;
-        if (document.getElementById("pdfList").value) {
-          loadPDF(document.getElementById("pdfList").value);
-        }
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
+      const nowMobile = window.innerWidth < 768;
+      if (nowMobile !== wasMobile) {
+        // Layout mode changed (single <-> double page): rebuild the book
+        wasMobile = nowMobile;
+        const id = document.getElementById("pdfList").value;
+        if (id) loadPDF(id);
+      } else if (pageFlip) {
+        // Same mode (e.g. entering/leaving fullscreen): just resize, no reload
+        pageFlip.update();
       }
     }, 300);
   });
