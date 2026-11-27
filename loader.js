@@ -23,12 +23,13 @@
     document.head.appendChild(s);
   });
 
-  // 3. Mount the widget container into WordPress
+  // 3. Mount #buku-misa-container into WordPress
   const widget = doc.getElementById("buku-misa-container");
   if (widget) root.replaceChildren(widget);
 
-  // 4. Load external CDN libraries sequentially (pdf.js, page-flip, SweetAlert2)
+  // 4. Load external libraries sequentially (pdf.js, page-flip, SweetAlert2)
   for (const extScript of doc.querySelectorAll("script[src]")) {
+    if (document.querySelector(`script[src="${extScript.src}"]`)) continue;
     await new Promise((resolve, reject) => {
       const s = document.createElement("script");
       s.src = extScript.src;
@@ -38,7 +39,7 @@
     });
   }
 
-  // 5. Execute the inline module script
+  // 5. Execute the widget's module script
   const inlineScript = doc.querySelector("script:not([src])");
   if (inlineScript) {
     const s = document.createElement("script");
