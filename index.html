@@ -26,6 +26,10 @@
     <!-- SweetAlert2 (Lightweight Modal) -->
     <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+      html.embedded.autosized:not(.fs-active) #buku-misa-container .toolbar {
+        transform: translateY(var(--vp-top, 0px));
+        will-change: transform;
+      }
       html,
       body {
         margin: 0;
@@ -205,10 +209,24 @@
         z-index: 10001;
       }
 
-      /* === FIX: ALLOW NATIVE HORIZONTAL SCROLLING WHEN ZOOMED === */
+      /* === FIX: ALLOW NATIVE 2D SCROLLING (VERTICAL + HORIZONTAL) WHEN ZOOMED === */
       #buku-misa-container.is-zoomed #flipbook,
-      #buku-misa-container.is-zoomed .st-page {
-        touch-action: auto !important;
+      #buku-misa-container.is-zoomed .stf__parent,
+      #buku-misa-container.is-zoomed .stf__wrapper,
+      #buku-misa-container.is-zoomed .stf__block,
+      #buku-misa-container.is-zoomed .stf__item {
+        touch-action: pan-x pan-y !important;
+      }
+
+      #buku-misa-container.is-zoomed #flipbook-wrapper {
+        max-height: calc(100dvh - 110px);
+        overscroll-behavior: contain;
+      }
+
+      html.embedded.autosized:not(.fs-active)
+        #buku-misa-container.is-zoomed
+        #flipbook-wrapper {
+        max-height: max(320px, calc(var(--vp-height, 75vh) - 95px));
       }
 
       /* === FLIPBOOK CONTAINER === */
@@ -716,11 +734,10 @@
           container.style.paddingBottom = "50px"; // Adds breathing room at the bottom
         } else {
           fullscreenBtn.innerText = "LAYAR PENUH";
-          container.style.minHeight = document.documentElement.classList.contains(
-            "embedded",
-          )
-            ? "0"
-            : "100dvh";
+          container.style.minHeight =
+            document.documentElement.classList.contains("embedded")
+              ? "0"
+              : "100dvh";
           container.style.height = "auto"; // Revert to dynamic height
           container.style.borderRadius = "0";
           container.style.overflowY = "visible"; // Removes the scrollbar
@@ -1123,6 +1140,8 @@
 
             flipbookWrapper.style.alignItems = "center";
             flipbookWrapper.style.justifyContent = "center";
+            flipbookWrapper.scrollTop = 0;
+            flipbookWrapper.scrollLeft = 0;
 
             // Reset scroll margins
             flipbookElement.style.marginRight = "0px";
@@ -1255,10 +1274,9 @@
       }
 
       function handlePinchEnd(e) {
-        if (e.touches.length >= 2) return;
+        if (e.type !== "touchcancel" && e.touches.length >= 2) return;
 
-        // Keep PageFlip blocked until the final touch is released.
-        isPinching = e.touches.length === 1;
+        isPinching = e.type !== "touchcancel" && e.touches.length === 1;
         const flipbookElement = document.getElementById("flipbook");
         if (flipbookElement && !isPinching)
           flipbookElement.style.transition = "";
@@ -1375,7 +1393,10 @@
           if (document.fullscreenElement || document.webkitFullscreenElement)
             return;
           const h = Math.ceil(
-            Math.max(box.getBoundingClientRect().height, document.body.scrollHeight),
+            Math.max(
+              box.getBoundingClientRect().height,
+              document.body.scrollHeight,
+            ),
           );
           if (!h || h === lastSent) return;
           lastSent = h;
