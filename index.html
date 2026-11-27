@@ -30,41 +30,45 @@
         transform: translateY(var(--vp-top, 0px));
         will-change: transform;
       }
-      html,
-      body {
+      /* Apply page background only when opened standalone (not inside WordPress) */
+      body:not(:has(#misa-widget-root)) {
         margin: 0;
         padding: 0;
         background: #f7f5f0;
       }
 
-      /* === THEMED SCROLLBAR, ON THE LEFT === */
-      html,
+      #misa-widget-root #buku-misa-container {
+        min-height: 0;
+      }
+
+      /* === THEMED SCROLLBAR, ON THE LEFT (Fullscreen & standalone only) === */
+      html:not(:has(#misa-widget-root)),
       #buku-misa-container:fullscreen {
         direction: rtl;
-      } /* rtl moves the bar to the left */
+      }
       #buku-misa-container:-webkit-full-screen {
         direction: rtl;
       }
-      .viewer {
+      #buku-misa-container .viewer {
         direction: ltr;
-      } /* keep content left-to-right */
-      * {
+      }
+      #buku-misa-container * {
         scrollbar-width: thin;
         scrollbar-color: #966331 #f7f5f0;
-      } /* Firefox */
-      ::-webkit-scrollbar {
+      }
+      #buku-misa-container ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
       }
-      ::-webkit-scrollbar-track {
+      #buku-misa-container ::-webkit-scrollbar-track {
         background: #f7f5f0;
       }
-      ::-webkit-scrollbar-thumb {
+      #buku-misa-container ::-webkit-scrollbar-thumb {
         background: #966331;
         border-radius: 10px;
         border: 2px solid #f7f5f0;
       }
-      ::-webkit-scrollbar-thumb:hover {
+      #buku-misa-container ::-webkit-scrollbar-thumb:hover {
         background: #5f3f1f;
       }
       #buku-misa-container * {
@@ -666,7 +670,7 @@
       const pdfCache = {};
 
       // === MODAL LOGIC (SweetAlert2) ===
-      document.addEventListener("DOMContentLoaded", () => {
+      const showDndReminder = () => {
         if (!sessionStorage.getItem("dndReminderSeen")) {
           Swal.fire({
             iconHtml:
@@ -686,12 +690,19 @@
             customClass: {
               popup: "swal2-border-theme",
             },
-            allowOutsideClick: false, // Ensures user clicks the button
+            allowOutsideClick: false,
           }).then(() => {
             sessionStorage.setItem("dndReminderSeen", "true");
           });
         }
-      });
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", showDndReminder);
+      } else {
+        showDndReminder();
+      }
+
       // === FULLSCREEN LOGIC ===
       const fullscreenBtn = document.getElementById("fullscreenBtn");
       const container = document.getElementById("buku-misa-container");
@@ -735,13 +746,14 @@
         } else {
           fullscreenBtn.innerText = "LAYAR PENUH";
           container.style.minHeight =
-            document.documentElement.classList.contains("embedded")
+            document.documentElement.classList.contains("embedded") ||
+            document.getElementById("misa-widget-root")
               ? "0"
               : "100dvh";
-          container.style.height = "auto"; // Revert to dynamic height
+          container.style.height = "auto";
           container.style.borderRadius = "0";
-          container.style.overflowY = "visible"; // Removes the scrollbar
-          container.style.paddingBottom = "30px"; // Revert original padding
+          container.style.overflowY = "visible";
+          container.style.paddingBottom = "30px";
         }
       };
 
@@ -990,7 +1002,13 @@
           const firstPage = await pdf.getPage(1);
           const vp = firstPage.getViewport({ scale: 1 });
           const pdfRatio = vp.height / vp.width;
-          const baseWidth = isMobile ? window.innerWidth - 20 : 550;
+          const wrapperWidth = wrapper.clientWidth;
+          const baseWidth = isMobile
+            ? Math.min(
+                window.innerWidth - 20,
+                wrapperWidth || window.innerWidth - 20,
+              )
+            : 550;
           const baseHeight = baseWidth * pdfRatio;
 
           pageFlip = new window.St.PageFlip(containerWrapper, {
